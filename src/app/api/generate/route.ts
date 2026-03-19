@@ -7,28 +7,31 @@ export async function POST(request: Request) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
 
-    const { promptId, userContext, customPrompt, actionType, allowTextInImage } = await request.json();
+    const body = await request.json();
+    const { promptId, userContext, customPrompt, actionType, allowTextInImage } = body;
 
     const ai = new GoogleGenAI({ apiKey });
-    const settings = await getSettings();
-    const textModel = settings['text_model'] || 'gemini-2.0-flash';
+    const settings = (await getSettings()) || {};
+    const textModel = settings['text_model'] || 'gemini-2.0-flash-exp';
     const imageModel = settings['image_model'] || 'imagen-3.0-generate-001';
 
     let basePromptStr = customPrompt;
     let negativePromptStr = '';
     
     if (promptId) {
-      const dbPrompts = await getPrompts();
-      const found = dbPrompts.find(p => p.id === promptId);
-      if (found) {
-        if (!basePromptStr) basePromptStr = found.content;
-        negativePromptStr = found.negative_prompt || '';
+      const dbPrompts = (await getPrompts()) || [];
+      if (Array.isArray(dbPrompts)) {
+        const found = dbPrompts.find(p => p.id === promptId);
+        if (found) {
+          if (!basePromptStr) basePromptStr = found.content;
+          negativePromptStr = found.negative_prompt || '';
+        }
       }
     }
 
-    const recentItems = await getRecentGenerations(30);
-    const recent = recentItems.filter(g => g.type === 'text').slice(0, 10);
-    const historyText = recent.length > 0 ? recent.map(r => `- ${r.content}`).join('\n') : 'Sin historial reciente.';
+    const recentItems = (await getRecentGenerations(30)) || [];
+    const recent = Array.isArray(recentItems) ? recentItems.filter(g => g.type === 'text').slice(0, 10) : [];
+    const historyText = recent.length > 0 ? recent.map(r => `- ${r.content}`).join('\n') : 'Sin historial.';
 
     const finalInstruction = (basePromptStr || '')
       .replace('{HISTORIAL}', historyText)
@@ -37,13 +40,15 @@ export async function POST(request: Request) {
     if (actionType === 'image') {
       let promptToUse = finalInstruction || 'Una imagen creativa.';
       if (allowTextInImage === false) {
-        promptToUse += "\n\nCRÍTICO: Sin texto, letras ni palabras.";
+        promptToUse += "\n\nCRÍTICO: Sin texto ni palabras.";
       }
       
       let synthResult = '';
       try {
-        const resp = await ai.models.generateContent({ model: textModel, contents: promptToUse });
-        if (resp.text) { promptToUse = resp.text.trim(); synthResult = promptToUse; }
+        const genModel = ai.getGenerativeModel({ model: textModel });
+        const resp = await genModel.generateContent(promptToUse);
+        const text = resp.response.text();
+        if (text) { promptToUse = text.trim(); synthResult = promptToUse; }
       } catch (err) { console.error("Synth err:", err); }
       
       if (allowTextInImage === false) {
@@ -51,7 +56,6 @@ export async function POST(request: Request) {
         negativePromptStr = negativePromptStr ? negativePromptStr + ", text, letters" : "text, letters";
       }
 
-      let base64Image = '';
       const isGeminiImage = imageModel.includes('gemini');
       const apiUrl = isGeminiImage 
         ? `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:generateContent?key=${apiKey}`
@@ -72,8 +76,11 @@ export async function POST(request: Request) {
       });
       
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || "API Error");
+      if (!res.ok) {
+        return NextResponse.json({ error: data.error?.message || "Google API Error" }, { status: res.status });
+      }
       
+      let base64Image = '';
       if (isGeminiImage) {
         const parts = data.candidates?.[0]?.content?.parts || [];
         const img = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
@@ -91,17 +98,18 @@ export async function POST(request: Request) {
       });
     }
 
-    const systemInstruction = `Asistente para canal de WhatsApp cristiano. Sé variado, no repitas temas del historial:\n${historyText}\nNo emojis, no negritas, una sola línea.`;
-    const response = await ai.models.generateContent({
+    const genModel = ai.getGenerativeModel({ 
       model: textModel,
-      contents: `Instrucción: ${finalInstruction}`,
-      config: { systemInstruction, temperature: 0.9 }
+      systemInstruction: `Asistente cristiano variado. No repitas temas:\n${historyText}\nCorto, natural, sin formato.`
     });
 
-    const generatedText = response.text || '';
+    const response = await genModel.generateContent(`Instrucción: ${finalInstruction}`);
+    const generatedText = response.response.text() || '';
+    
     await saveGeneration('text', basePromptStr, generatedText);
     return NextResponse.json({ result: generatedText });
   } catch (error) {
+    console.error("Generation Error:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
