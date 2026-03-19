@@ -109,8 +109,13 @@ Formato de respuesta (JSON puro):
       // Build the visual prompt from the selected suggestion
       let promptToUse = selectedSuggestion || finalInstruction || 'Una imagen creativa.';
       
+      // Extract branding from the original prompt (e.g. "Bibliabendita.com")
+      const brandingMatch = (basePromptStr || '').match(/['']([A-Za-z0-9áéíóúñ]+\.[A-Za-z]{2,})['']/i) 
+        || (basePromptStr || '').match(/([A-Za-z0-9áéíóúñ]+\.com)/i);
+      const brandingText = brandingMatch ? brandingMatch[1] : '';
+      
       const textInstruction = allowTextInImage
-        ? 'The image SHOULD include visible text IN SPANISH (español). Include a short Bible verse, inspirational phrase, or title IN SPANISH overlaid on the scene. All text must be written in Spanish language.'
+        ? `The image SHOULD include visible text IN SPANISH (español). Include a short Bible verse or inspirational phrase IN SPANISH overlaid on the scene.${brandingText ? ` MANDATORY: The text "${brandingText}" must appear clearly at the bottom center of the image in an elegant, readable font, naturally integrated into the design.` : ''}`
         : 'CRITICAL: The image must contain NO text, NO letters, NO words, NO writing whatsoever. Pure visual scene only.';
       
       // Synthesize into an English image generation prompt
@@ -122,7 +127,7 @@ Formato de respuesta (JSON puro):
 
 "${promptToUse}"
 
-Describe: iluminación, estilo artístico (cinematic, oil painting, watercolor, soft photography, etc.), composición, colores, atmósfera y emociones. 
+Describe: iluminación, estilo artístico (cinematic, oil painting, watercolor, soft photography, etc.), composición, colores, atmósfera y emociones.${brandingText && allowTextInImage ? `\nIMPORTANTE: Incluye el texto exacto '${brandingText}' en la parte inferior central de la imagen, con tipografía elegante y legible.` : ''}
 Responde SOLO con el prompt en inglés, nada más.`,
           config: {
             systemInstruction: `You are an expert visual prompt engineer. Output ONLY the English image prompt. No explanations, no markdown. Max 70 words. Be specific and creative.
@@ -133,6 +138,13 @@ ${textInstruction}`,
         const text = resp.text;
         if (text) { promptToUse = text.trim(); synthResult = promptToUse; }
       } catch (err) { console.error("Synth err:", err); }
+      
+      // Append branding to the final prompt if text is allowed
+      if (allowTextInImage && brandingText) {
+        if (!promptToUse.toLowerCase().includes(brandingText.toLowerCase())) {
+          promptToUse += `, with the text "${brandingText}" elegantly displayed at the bottom center`;
+        }
+      }
       
       if (!allowTextInImage) {
         promptToUse += " (no text, no letters, no writing)";
