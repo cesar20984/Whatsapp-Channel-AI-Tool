@@ -33,8 +33,12 @@ export async function POST(request: Request) {
     const recent = Array.isArray(recentItems) ? recentItems.filter(g => g.type === 'text').slice(0, 10) : [];
     const historyText = recent.length > 0 ? recent.map(r => `- ${r.content}`).join('\n') : 'Sin historial.';
 
+    // Para imágenes: solo el mensaje MÁS RECIENTE del historial
+    const latestText = recent.length > 0 ? recent[0].content : '';
+    const imageHistoryText = latestText || 'Sin historial.';
+
     const finalInstruction = (basePromptStr || '')
-      .replace('{HISTORIAL}', historyText)
+      .replace('{HISTORIAL}', actionType === 'image' ? imageHistoryText : historyText)
       .replace('{EXTRA}', userContext || '(Sin contexto)');
 
     if (actionType === 'image') {
@@ -47,7 +51,17 @@ export async function POST(request: Request) {
       try {
         const resp = await ai.models.generateContent({
             model: textModel,
-            contents: promptToUse
+            contents: promptToUse,
+            config: {
+              systemInstruction: `You are an expert visual prompt engineer. Your ONLY job is to create a short image generation prompt (max 70 words) in English.
+CRITICAL RULES:
+- Focus EXCLUSIVELY on the SPECIFIC topic mentioned. If the topic is about forgiveness, create imagery about forgiveness. If it's about light, create imagery about light. If it's about judgment, create imagery about that.
+- DO NOT default to generic shepherd/sheep/pastoral imagery unless the text SPECIFICALLY talks about Psalm 23 or shepherds.
+- Create VARIED, UNIQUE imagery each time. Think creatively: use metaphors, abstract concepts, nature scenes, human emotions, cosmic imagery, etc.
+- Describe lighting, style (cinematic, oil painting, watercolor, etc.), composition, mood, and atmosphere.
+- Output ONLY the English image prompt, nothing else.`,
+              temperature: 1.0
+            }
         });
         const text = resp.text;
         if (text) { promptToUse = text.trim(); synthResult = promptToUse; }
