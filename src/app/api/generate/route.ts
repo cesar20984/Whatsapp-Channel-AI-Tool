@@ -63,12 +63,17 @@ export async function POST(request: Request) {
         ? `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:generateContent?key=${apiKey}`
         : `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:predict?key=${apiKey}`;
 
+      const parameters: any = { sampleCount: 1, aspectRatio: "1:1" };
+      if (negativePromptStr && negativePromptStr.trim() !== '') {
+        parameters.negativePrompt = negativePromptStr;
+      }
+
       const apiBody = isGeminiImage ? {
         contents: [{ parts: [{ text: promptToUse }] }],
-        generationConfig: { responseModalities: ["IMAGE"], imageConfig: { imageSize: "1024", aspectRatio: "1:1" } }
+        generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "1:1" } }
       } : {
         instances: [{ prompt: promptToUse }],
-        parameters: { sampleCount: 1, negativePrompt: negativePromptStr, imageConfig: { imageSize: "1024", aspectRatio: "1:1" } }
+        parameters: parameters
       };
 
       const res = await fetch(apiUrl, {
