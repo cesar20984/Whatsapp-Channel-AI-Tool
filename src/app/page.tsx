@@ -11,6 +11,8 @@ export default function Home() {
   const [allowTextInImage, setAllowTextInImage] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newPrompt, setNewPrompt] = useState({ title: '', content: '', color: '#3b82f6' });
+  const [imageSuggestions, setImageSuggestions] = useState<{id: number, title: string, description: string}[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   
   // FEEDBACK STATE
   const [copiedText, setCopiedText] = useState(false);
@@ -32,14 +34,35 @@ export default function Home() {
       .catch(() => setPrompts([]));
   }, []);
 
-  const handleGenerate = async (promptId: string, actionType: 'text' | 'image' = 'text') => {
+  const handleGenerate = async (promptId: string, actionType: 'text' | 'image' | 'image-suggestions' = 'text') => {
     const promptItem = prompts.find(p => p.id === promptId);
     let resolvedContent = promptItem?.content;
 
     if (resolvedContent && resolvedContent.includes('[INPUT]')) {
       const userInput = window.prompt("Escribe el contenido extra para este botón (ej: sugerencia, pasaje o solicitud):");
-      if (userInput === null) return; // Canceló
+      if (userInput === null) return;
       resolvedContent = resolvedContent.replace('[INPUT]', userInput);
+    }
+
+    // IMAGE SUGGESTIONS (Step 1)
+    if (actionType === 'image-suggestions') {
+      setLoadingSuggestions(true);
+      setImageSuggestions([]);
+      setResult(null);
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ promptId, customPrompt: resolvedContent, userContext: customContext, actionType: 'image-suggestions' })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        if (data.suggestions && Array.isArray(data.suggestions)) {
+          setImageSuggestions(data.suggestions);
+        }
+      } catch (error) { alert(error); }
+      finally { setLoadingSuggestions(false); }
+      return;
     }
 
     setLoading(true);
@@ -57,6 +80,30 @@ export default function Home() {
       if (actionType === 'text') setResult({ text: data.result, originalResolvedPrompt: data.originalResolvedPrompt });
       else setResult({ image: data.result, synthesizedPrompt: data.synthesizedPrompt, originalResolvedPrompt: data.originalResolvedPrompt });
     } catch (error) { alert(error); } 
+    finally { setLoading(false); }
+  };
+
+  const handleImageFromSuggestion = async (suggestion: {id: number, title: string, description: string}) => {
+    setImageSuggestions([]);
+    setLoading(true);
+    setResult(null);
+    setCopiedImage(false);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          promptId: 'image_generation', 
+          actionType: 'image', 
+          allowTextInImage,
+          selectedSuggestion: `${suggestion.title}: ${suggestion.description}`,
+          userContext: customContext
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setResult({ image: data.result, synthesizedPrompt: data.synthesizedPrompt, originalResolvedPrompt: suggestion.description });
+    } catch (error) { alert(error); }
     finally { setLoading(false); }
   };
 
@@ -230,9 +277,52 @@ export default function Home() {
             <input type="checkbox" checked={allowTextInImage} onChange={(e) => setAllowTextInImage(e.target.checked)} style={{ width: '18px', height: '18px' }} />
             Incluir texto
           </label>
-          <button className="btn" style={{ background: '#ec4899', color: 'white', padding: '0.8rem', fontWeight: 'bold' }} onClick={() => handleGenerate(p.id, 'image')} disabled={loading}>Crear Imagen</button>
+          <button 
+            className="btn" 
+            style={{ background: '#ec4899', color: 'white', padding: '0.8rem', fontWeight: 'bold' }} 
+            onClick={() => handleGenerate(p.id, 'image-suggestions')} 
+            disabled={loading || loadingSuggestions}
+          >
+            {loadingSuggestions ? '⏳ Generando opciones...' : '🎨 Crear Imagen'}
+          </button>
         </div>
       ))}
+
+      {/* Image Suggestions */}
+      {imageSuggestions.length > 0 && (
+        <div className="glass-panel animate-fade-in" style={{ padding: '1rem', marginBottom: '1rem', border: '1px solid #ec4899' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+            <h3 style={{ margin: 0, fontSize: '0.95rem', color: '#ec4899' }}>🎨 Elige una opción de imagen:</h3>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} onClick={() => {
+                setImageSuggestions([]);
+                const imgPrompt = prompts.find(p => p.id === 'image_generation');
+                if (imgPrompt) handleGenerate(imgPrompt.id, 'image-suggestions');
+              }}>🔄</button>
+              <button className="btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: 'var(--danger-color)' }} onClick={() => setImageSuggestions([])}>✕</button>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {imageSuggestions.map((s) => (
+              <button 
+                key={s.id}
+                className="glass-panel"
+                onClick={() => handleImageFromSuggestion(s)}
+                disabled={loading}
+                style={{ 
+                  padding: '0.8rem', textAlign: 'left', cursor: 'pointer', width: '100%',
+                  border: '1px solid rgba(236, 72, 153, 0.3)',
+                  transition: 'all 0.2s',
+                  background: 'rgba(236, 72, 153, 0.05)'
+                }}
+              >
+                <div style={{ fontWeight: '600', fontSize: '0.85rem', marginBottom: '0.3rem', color: '#ec4899' }}>{s.title}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{s.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Prompt Buttons Grid */}
       <div className="grid grid-cols-2">
