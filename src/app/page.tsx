@@ -28,6 +28,15 @@ export default function Home() {
   }, []);
 
   const handleGenerate = async (promptId: string, actionType: 'text' | 'image' = 'text') => {
+    const promptItem = prompts.find(p => p.id === promptId);
+    let resolvedContent = promptItem?.content;
+
+    if (resolvedContent && resolvedContent.includes('[INPUT]')) {
+      const userInput = window.prompt("Escribe el contenido extra para este botón (ej: sugerencia, pasaje o solicitud):");
+      if (userInput === null) return; // Canceló
+      resolvedContent = resolvedContent.replace('[INPUT]', userInput);
+    }
+
     setLoading(true);
     setResult(null);
     setCopiedText(false);
@@ -36,7 +45,7 @@ export default function Home() {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ promptId, userContext: customContext, actionType, allowTextInImage })
+        body: JSON.stringify({ promptId, customPrompt: resolvedContent, userContext: customContext, actionType, allowTextInImage })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -247,6 +256,13 @@ export default function Home() {
             <div className="form-group"><label className="form-label">Título</label><input className="form-control" value={editingPrompt.title} onChange={e => setEditingPrompt({...editingPrompt, title: e.target.value})} /></div>
             <div className="form-group"><label className="form-label">Color</label><input type="color" className="form-control" style={{ height: '40px' }} value={editingPrompt.color || '#3b82f6'} onChange={e => setEditingPrompt({...editingPrompt, color: e.target.value})} /></div>
             <div className="form-group"><label className="form-label">Prompt</label><textarea className="form-control" value={editingPrompt.content} onChange={e => setEditingPrompt({...editingPrompt, content: e.target.value})} style={{ minHeight: '100px' }} /></div>
+            <label className="form-label mt-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+              <input type="checkbox" checked={editingPrompt.content.includes('[INPUT]')} onChange={e => {
+                const add = e.target.checked;
+                setEditingPrompt({...editingPrompt, content: add ? `${editingPrompt.content}\n\n[INPUT]` : editingPrompt.content.replace('\n\n[INPUT]', '').replace('[INPUT]', '')});
+              }} style={{ width: '18px', height: '18px' }} />
+              Pedir un texto extra al usar este botón (ej. Versículo)
+            </label>
             <div className="flex" style={{ gap: '1rem', justifyContent: 'space-between', marginTop: '1rem' }}>
               <button className="btn" style={{ color: 'var(--danger-color)' }} onClick={() => handleDeletePrompt(editingPrompt.id)}>🗑️</button>
               <div className="flex" style={{ gap: '1rem' }}>
@@ -264,6 +280,13 @@ export default function Home() {
             <div className="form-group"><label className="form-label">Título</label><input className="form-control" value={newPrompt.title} onChange={e => setNewPrompt({...newPrompt, title: e.target.value})} /></div>
             <div className="form-group"><label className="form-label">Color</label><input type="color" className="form-control" style={{ height: '40px' }} value={newPrompt.color} onChange={e => setNewPrompt({...newPrompt, color: e.target.value})} /></div>
             <div className="form-group"><label className="form-label">Instrucción</label><textarea className="form-control" value={newPrompt.content} onChange={e => setNewPrompt({...newPrompt, content: e.target.value})} style={{ minHeight: '100px' }} /></div>
+            <label className="form-label mt-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+              <input type="checkbox" checked={newPrompt.content.includes('[INPUT]')} onChange={e => {
+                const add = e.target.checked;
+                setNewPrompt({...newPrompt, content: add ? `${newPrompt.content}\n\n[INPUT]` : newPrompt.content.replace('\n\n[INPUT]', '').replace('[INPUT]', '')});
+              }} style={{ width: '18px', height: '18px' }} />
+              Pedir un texto extra al usar este botón (ej. Versículo)
+            </label>
             <div className="flex" style={{ gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
               <button className="btn" onClick={() => setIsAddingNew(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleAddNewPrompt}>Crear</button>

@@ -5,6 +5,9 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'WhatsApp Channel Tool - AI Generator',
   description: 'Herramienta de IA para generar contenido cristiano para WhatsApp',
+  icons: {
+    icon: '/icon.webp'
+  }
 };
 
 export default function RootLayout({
