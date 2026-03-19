@@ -74,9 +74,16 @@ Formato de respuesta (JSON puro):
       let suggestions = [];
       try {
         let rawText = (resp.text || '').trim();
-        // Clean any markdown formatting
+        // Clean markdown formatting
         rawText = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        // Remove trailing commas before } or ] (common AI mistake)
+        rawText = rawText.replace(/,\s*([\]}])/g, '$1');
         suggestions = JSON.parse(rawText);
+        // Clean descriptions: remove any "Prompt: ..." the AI added inside
+        suggestions = suggestions.map((s: any) => ({
+          ...s,
+          description: (s.description || '').replace(/\s*Prompt:[\s\S]*$/i, '').trim()
+        }));
       } catch (e) {
         console.error('Failed to parse suggestions JSON:', e, 'Raw:', resp.text);
         return NextResponse.json({ error: 'No se pudieron generar las opciones. Intenta de nuevo.' }, { status: 500 });
