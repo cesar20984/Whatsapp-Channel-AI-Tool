@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🤖 Whatsapp Channel AI Tool
 
-## Getting Started
+Herramienta avanzada para la generación de contenido (texto e imágenes) para canales de WhatsApp, utilizando la inteligencia artificial de Google Gemini y Google Imagen.
 
-First, run the development server:
+## 🚀 Despliegue en Vercel + Neon (PostgreSQL)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Esta aplicación está lista para ser desplegada en Vercel con una base de datos de Neon por detrás.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 1. Preparar la Base de Datos (Neon)
+1. Crea un proyecto en [Neon.tech](https://neon.tech).
+2. Obtén tu **Connection String** (en formato `postgres://...`).
+3. Agrega `?sslmode=require` al final si es necesario.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Despliegue en Vercel
+1. Sube este código a un repositorio de GitHub (Público o Privado).
+2. Conecta el repositorio a un nuevo proyecto en **Vercel**.
+3. Configura las siguientes variables de entorno en Vercel:
+   - `GEMINI_API_KEY`: Tu llave de Google AI Studio.
+   - `DATABASE_URL`: La connection string de Neon que obtuviste en el paso anterior.
+4. Vercel detectará que es un proyecto de Next.js y hará el despliegue automáticamente.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Desarrollo Local (SQLite)
+Si no configuras `DATABASE_URL`, el sistema usará automáticamente una base de datos local en SQLite (`whatsapp_channel.db`).
 
-## Learn More
+## ✨ Funcionalidades
+- **Generación de Texto**: Saludos, despedidas, explicaciones de versículos, etc.
+- **Generación de Imágenes**: Creación de imágenes artísticas con control de texto.
+- **Gestión Dinámica**: Agrega, edita, elimina y reordena tus propios botones de prompt.
+- **Historial**: Revisa y gestiona lo generado anteriormente.
+- **Personalización**: Elige entre diferentes modelos de lenguaje y de imagen directamente desde los ajustes.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+Creado por César.
