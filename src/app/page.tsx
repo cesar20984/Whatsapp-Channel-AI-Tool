@@ -17,6 +17,10 @@ export default function Home() {
   const [copiedImage, setCopiedImage] = useState(false);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   const canDragRef = useRef(false);
+  const promptsRef = useRef(prompts);
+  
+  // Keep ref in sync with state
+  useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
   useEffect(() => {
     fetch('/api/prompts')
@@ -103,7 +107,7 @@ export default function Home() {
   const onDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (draggedItemIndex === null || draggedItemIndex === index) return;
-    const newPrompts = [...prompts];
+    const newPrompts = [...promptsRef.current];
     const draggedItem = newPrompts[draggedItemIndex];
     newPrompts.splice(draggedItemIndex, 1);
     newPrompts.splice(index, 0, draggedItem);
@@ -113,12 +117,16 @@ export default function Home() {
 
   const onDragEnd = async () => {
     setDraggedItemIndex(null);
-    const positions = prompts.map((p, idx) => ({ id: p.id, position: idx }));
-    await fetch('/api/prompts', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ positions })
-    });
+    canDragRef.current = false;
+    const currentPrompts = promptsRef.current;
+    const positions = currentPrompts.map((p, idx) => ({ id: p.id, position: idx }));
+    try {
+      await fetch('/api/prompts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ positions })
+      });
+    } catch (err) { console.error('Failed to save positions:', err); }
   };
 
   const copyToClipboard = async (text: string) => {
@@ -192,7 +200,7 @@ export default function Home() {
                   onDragStart(index);
                 }}
                 onDragOver={(e) => onDragOver(e, index)}
-                onDragEnd={() => { canDragRef.current = false; onDragEnd(); }}
+                onDragEnd={onDragEnd}
                 className="glass-panel" 
                 style={{ 
                   padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem',
