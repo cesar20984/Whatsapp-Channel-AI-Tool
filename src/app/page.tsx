@@ -103,16 +103,20 @@ export default function Home() {
     }
   };
 
+  const draggablePrompts = prompts.filter(p => p.id !== 'image_generation');
+  const imagePrompt = prompts.find(p => p.id === 'image_generation');
+
   const onDragStart = (index: number) => setDraggedItemIndex(index);
   const onDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (draggedItemIndex === null || draggedItemIndex === index) return;
-    const newPrompts = [...promptsRef.current];
-    const draggedItem = newPrompts[draggedItemIndex];
-    newPrompts.splice(draggedItemIndex, 1);
-    newPrompts.splice(index, 0, draggedItem);
+    const reordered = [...draggablePrompts];
+    const draggedItem = reordered[draggedItemIndex];
+    reordered.splice(draggedItemIndex, 1);
+    reordered.splice(index, 0, draggedItem);
     setDraggedItemIndex(index);
-    setPrompts(newPrompts);
+    // Rebuild full array: draggable items + image_generation at end
+    setPrompts(imagePrompt ? [...reordered, imagePrompt] : reordered);
   };
 
   const onDragEnd = async () => {
@@ -188,7 +192,7 @@ export default function Home() {
           )}
 
           <div className="grid grid-cols-2" style={{ gap: '1rem' }}>
-            {prompts.filter(p => p.id !== 'image_generation').map((p, index) => (
+            {draggablePrompts.map((p, index) => (
               <div 
                 key={p.id}
                 draggable
