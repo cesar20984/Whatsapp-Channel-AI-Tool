@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     if (actionType === 'image-suggestions') {
       const contextForSuggestions = finalInstruction || 'Contenido cristiano inspirador.';
       const textRule = allowTextInImage 
-        ? '- Las imágenes PUEDEN incluir texto visible, versículos, frases o títulos superpuestos.' 
+        ? '- Las imágenes PUEDEN incluir texto visible EN ESPAÑOL: versículos bíblicos, frases inspiradoras o títulos superpuestos. El texto SIEMPRE debe estar en español.' 
         : '- Las imágenes NO deben contener texto, letras ni palabras. Solo escenas visuales puras.';
       
       const resp = await ai.models.generateContent({
@@ -110,7 +110,7 @@ Formato de respuesta (JSON puro):
       let promptToUse = selectedSuggestion || finalInstruction || 'Una imagen creativa.';
       
       const textInstruction = allowTextInImage
-        ? 'The image SHOULD include visible text, a short Bible verse, or an inspirational phrase overlaid on the scene.'
+        ? 'The image SHOULD include visible text IN SPANISH (español). Include a short Bible verse, inspirational phrase, or title IN SPANISH overlaid on the scene. All text must be written in Spanish language.'
         : 'CRITICAL: The image must contain NO text, NO letters, NO words, NO writing whatsoever. Pure visual scene only.';
       
       // Synthesize into an English image generation prompt
