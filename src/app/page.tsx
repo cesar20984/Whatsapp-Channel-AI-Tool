@@ -181,23 +181,36 @@ export default function Home() {
           <div className="grid grid-cols-2" style={{ gap: '1rem' }}>
             {prompts.filter(p => p.id !== 'image_generation').map((p, index) => (
               <div 
-                key={p.id} draggable onDragStart={() => onDragStart(index)} onDragOver={(e) => onDragOver(e, index)} onDragEnd={onDragEnd}
+                key={p.id}
+                draggable
+                onDragStart={(e) => {
+                  // Only allow drag from the handle
+                  const target = e.target as HTMLElement;
+                  if (!target.closest('.drag-handle')) {
+                    e.preventDefault();
+                    return;
+                  }
+                  onDragStart(index);
+                }}
+                onDragOver={(e) => onDragOver(e, index)}
+                onDragEnd={onDragEnd}
                 className="glass-panel" 
                 style={{ 
-                  padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', cursor: 'grab',
+                  padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem',
                   borderLeft: `4px solid ${p.color || 'var(--accent-color)'}`,
                   opacity: draggedItemIndex === index ? 0.4 : 1,
-                  transition: 'transform 0.2s',
+                  transition: 'transform 0.2s, opacity 0.2s',
                   transform: draggedItemIndex === index ? 'scale(1.02)' : 'scale(1)'
                 }}
               >
-                <div className="flex justify-between items-center" style={{ pointerEvents: 'none' }}>
-                  <h3 style={{ margin: 0, fontSize: '0.95rem' }}>{p.title}</h3>
-                  <button className="btn btn-icon" style={{ pointerEvents: 'auto' }} onClick={() => setEditingPrompt(p)}>⚙️</button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="drag-handle" style={{ cursor: 'grab', padding: '0.2rem 0.4rem', fontSize: '1.1rem', opacity: 0.5, userSelect: 'none' }} title="Arrastrar para mover">☰</div>
+                  <h3 style={{ margin: 0, fontSize: '0.95rem', flex: 1, marginLeft: '0.5rem' }}>{p.title}</h3>
+                  <button className="btn btn-icon" onClick={() => setEditingPrompt(p)}>⚙️</button>
                 </div>
                 <button 
                   className="btn" 
-                  style={{ background: p.color || 'var(--accent-color)', color: 'white', width: '100%', fontSize: '0.9rem', pointerEvents: 'auto' }} 
+                  style={{ background: p.color || 'var(--accent-color)', color: 'white', width: '100%', fontSize: '0.9rem' }} 
                   onClick={() => handleGenerate(p.id, 'text')} 
                   disabled={loading}
                 >
