@@ -35,7 +35,7 @@ export async function dbQuery(sql: string, params: any[] = []) {
           pgSqlStr += ' ON CONFLICT DO NOTHING';
        }
     }
-    return await pgSql(pgSqlStr, params);
+    return await pgSql.query(pgSqlStr, params);
   } else {
     // SQLite (?) logic
     const stmt = sqliteDb.prepare(sql);
@@ -79,9 +79,9 @@ export async function initDb() {
     // In postgres, id in generations should be SERIAL. 
     // SQLite id should be INTEGER PRIMARY KEY AUTOINCREMENT.
     // We adjust the schema string or run individual commands.
-    await pgSql(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
-    await pgSql(`CREATE TABLE IF NOT EXISTS prompts (id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL, negative_prompt TEXT, color TEXT DEFAULT 'var(--accent-color)', position INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    await pgSql(`CREATE TABLE IF NOT EXISTS generations (id SERIAL PRIMARY KEY, type TEXT NOT NULL, prompt TEXT NOT NULL, content TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await pgSql.query(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
+    await pgSql.query(`CREATE TABLE IF NOT EXISTS prompts (id TEXT PRIMARY KEY, title TEXT NOT NULL, content TEXT NOT NULL, negative_prompt TEXT, color TEXT DEFAULT 'var(--accent-color)', position INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await pgSql.query(`CREATE TABLE IF NOT EXISTS generations (id SERIAL PRIMARY KEY, type TEXT NOT NULL, prompt TEXT NOT NULL, content TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
   } else {
     // SQLite Init
     sqliteDb.exec(schema.replace('SERIAL', 'INTEGER PRIMARY KEY AUTOINCREMENT'));
@@ -106,11 +106,14 @@ export async function initDb() {
 
   for (const p of defaultPrompts) {
     const checkSql = `SELECT id FROM prompts WHERE id = ?`;
-    const exists = pgSql ? await pgSql(checkSql.replace('?', '$1'), [p.id]) : sqliteDb.prepare(checkSql).get(p.id);
+    const exists = pgSql ? await pgSql.query(checkSql.replace('?', '$1'), [p.id]) : sqliteDb.prepare(checkSql).get(p.id);
     
-    if (!exists || (pgSql && exists.length === 0)) {
+    // PG query returns { rows: [...] } 
+    const isNew = pgSql ? exists.rows.length === 0 : !exists;
+
+    if (isNew) {
       const insertSql = `INSERT INTO prompts (id, title, content, color, position) VALUES (?, ?, ?, ?, ?)`;
-      if (pgSql) await pgSql(insertSql.replace(/\?/g, (_, idx) => `$${idx + 1}`), [p.id, p.title, p.content, p.color, p.position]);
+      if (pgSql) await pgSql.query(insertSql.replace(/\?/g, (_, idx) => `$${idx + 1}`), [p.id, p.title, p.content, p.color, p.position]);
       else sqliteDb.prepare(insertSql).run(p.id, p.title, p.content, p.color, p.position);
     }
   }
