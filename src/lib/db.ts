@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { neon } from '@neondatabase/serverless';
+import { Pool } from '@neondatabase/serverless';
 import path from 'path';
 
 const isProduction = process.env.NODE_ENV === 'production' || !!process.env.DATABASE_URL;
@@ -8,7 +8,7 @@ let sqliteDb: any;
 let pgSql: any;
 
 if (isProduction && process.env.DATABASE_URL) {
-  pgSql = neon(process.env.DATABASE_URL);
+  pgSql = new Pool({ connectionString: process.env.DATABASE_URL });
 } else {
   const dbPath = process.env.DB_PATH || path.join(process.cwd(), 'whatsapp_channel.db');
   sqliteDb = new Database(dbPath);
