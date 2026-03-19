@@ -75,17 +75,23 @@ Formato de respuesta (JSON puro):
         }
       });
 
-      let suggestions = [];
+      let suggestions: any[] = [];
       try {
         let rawText = (resp.text || '').trim();
         // Clean markdown formatting
         rawText = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
         // Remove trailing commas before } or ] (common AI mistake)
         rawText = rawText.replace(/,\s*([\]}])/g, '$1');
-        suggestions = JSON.parse(rawText);
-        // Clean descriptions: remove any "Prompt: ..." the AI added inside
-        suggestions = suggestions.map((s: any) => ({
-          ...s,
+        let parsed = JSON.parse(rawText);
+        // If AI returned an object {"1": {...}, "2": {...}} instead of an array, convert it
+        if (parsed && !Array.isArray(parsed) && typeof parsed === 'object') {
+          parsed = Object.values(parsed);
+        }
+        if (!Array.isArray(parsed)) throw new Error('Response is not an array');
+        // Clean descriptions and ensure each has an id
+        suggestions = parsed.map((s: any, idx: number) => ({
+          id: s.id || idx + 1,
+          title: s.title || `Opción ${idx + 1}`,
           description: (s.description || '').replace(/\s*Prompt:[\s\S]*$/i, '').trim()
         }));
       } catch (e) {
