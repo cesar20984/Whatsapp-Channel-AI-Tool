@@ -43,6 +43,9 @@ export async function POST(request: Request) {
     // ═══════════════════════════════════════════
     if (actionType === 'image-suggestions') {
       const contextForSuggestions = finalInstruction || 'Contenido cristiano inspirador.';
+      const textRule = allowTextInImage 
+        ? '- Las imágenes PUEDEN incluir texto visible, versículos, frases o títulos superpuestos.' 
+        : '- Las imágenes NO deben contener texto, letras ni palabras. Solo escenas visuales puras.';
       
       const resp = await ai.models.generateContent({
         model: textModel,
@@ -55,8 +58,9 @@ REGLAS:
 - Cada opción debe ser una descripción corta (1-2 frases) en ESPAÑOL de lo que aparecería en la imagen.
 - Las opciones deben ser VARIADAS: distintos estilos, escenas, metáforas visuales.
 - NO repitas pastores con ovejas en todas las opciones. Sé creativo: paisajes, personas, objetos simbólicos, escenas abstractas, naturaleza, cosmos, etc.
+${textRule}
 - Cada opción debe conectarse con el tema del historial/contexto.
-- Responde ÚNICAMENTE con un JSON válido, sin markdown, sin backticks.
+- Responde ÚNICAMENTE con un JSON válido, sin markdown, sin backticks. NO uses comas al final del último elemento.
 
 Formato de respuesta (JSON puro):
 [
@@ -99,9 +103,9 @@ Formato de respuesta (JSON puro):
       // Build the visual prompt from the selected suggestion
       let promptToUse = selectedSuggestion || finalInstruction || 'Una imagen creativa.';
       
-      if (allowTextInImage === false) {
-        promptToUse += "\n\nCRÍTICO: Sin texto ni palabras.";
-      }
+      const textInstruction = allowTextInImage
+        ? 'The image SHOULD include visible text, a short Bible verse, or an inspirational phrase overlaid on the scene.'
+        : 'CRITICAL: The image must contain NO text, NO letters, NO words, NO writing whatsoever. Pure visual scene only.';
       
       // Synthesize into an English image generation prompt
       let synthResult = '';
@@ -115,7 +119,8 @@ Formato de respuesta (JSON puro):
 Describe: iluminación, estilo artístico (cinematic, oil painting, watercolor, soft photography, etc.), composición, colores, atmósfera y emociones. 
 Responde SOLO con el prompt en inglés, nada más.`,
           config: {
-            systemInstruction: `You are an expert visual prompt engineer. Output ONLY the English image prompt. No explanations, no markdown. Max 70 words. Be specific and creative.`,
+            systemInstruction: `You are an expert visual prompt engineer. Output ONLY the English image prompt. No explanations, no markdown. Max 70 words. Be specific and creative.
+${textInstruction}`,
             temperature: 0.9
           }
         });
@@ -123,9 +128,9 @@ Responde SOLO con el prompt en inglés, nada más.`,
         if (text) { promptToUse = text.trim(); synthResult = promptToUse; }
       } catch (err) { console.error("Synth err:", err); }
       
-      if (allowTextInImage === false) {
-        promptToUse += " (no text, no letters)";
-        negativePromptStr = negativePromptStr ? negativePromptStr + ", text, letters" : "text, letters";
+      if (!allowTextInImage) {
+        promptToUse += " (no text, no letters, no writing)";
+        negativePromptStr = negativePromptStr ? negativePromptStr + ", text, letters, words, writing" : "text, letters, words, writing";
       }
 
       const isGeminiImage = imageModel.includes('gemini');

@@ -53,7 +53,7 @@ export default function Home() {
         const res = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ promptId, customPrompt: resolvedContent, userContext: customContext, actionType: 'image-suggestions' })
+          body: JSON.stringify({ promptId, customPrompt: resolvedContent, userContext: customContext, actionType: 'image-suggestions', allowTextInImage })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
