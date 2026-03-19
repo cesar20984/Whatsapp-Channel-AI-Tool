@@ -63,17 +63,26 @@ export async function POST(request: Request) {
         ? `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:generateContent?key=${apiKey}`
         : `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:predict?key=${apiKey}`;
 
-      const parameters: any = { sampleCount: 1, aspectRatio: "1:1" };
+      const parameters: any = { sampleCount: 1 };
       if (negativePromptStr && negativePromptStr.trim() !== '') {
         parameters.negativePrompt = negativePromptStr;
       }
 
+      const imageConfig: any = { aspectRatio: "1:1" };
+      
+      // Aplicar 512 EXCLUSIVAMENTE para Nano Banana / Gemini, o modelos antiguos.
+      // imagen-3 prohíbe el uso de "imageSize: 512" (devuelve Invalid Argument).
+      const modelLower = imageModel.toLowerCase();
+      if (!modelLower.includes('imagen-3') || modelLower.includes('nano') || modelLower.includes('banana') || isGeminiImage) {
+        imageConfig.imageSize = "512";
+      }
+
       const apiBody = isGeminiImage ? {
         contents: [{ parts: [{ text: promptToUse }] }],
-        generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "1:1" } }
+        generationConfig: { responseModalities: ["IMAGE"], imageConfig }
       } : {
         instances: [{ prompt: promptToUse }],
-        parameters: parameters
+        parameters: { ...parameters, imageConfig }
       };
 
       const res = await fetch(apiUrl, {
