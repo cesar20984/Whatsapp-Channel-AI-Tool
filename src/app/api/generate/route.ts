@@ -114,9 +114,14 @@ Formato de respuesta (JSON puro):
         || (basePromptStr || '').match(/([A-Za-z0-9áéíóúñ]+\.com)/i);
       const brandingText = brandingMatch ? brandingMatch[1] : '';
       
+      // Branding ALWAYS appears. Checkbox only controls additional text (verses, phrases)
+      const brandingInstruction = brandingText 
+        ? `MANDATORY: The text "${brandingText}" must appear clearly at the bottom center of the image in an elegant, readable font, naturally integrated into the design. This branding text is ALWAYS required.`
+        : '';
+      
       const textInstruction = allowTextInImage
-        ? `The image SHOULD include visible text IN SPANISH (español). Include a short Bible verse or inspirational phrase IN SPANISH overlaid on the scene.${brandingText ? ` MANDATORY: The text "${brandingText}" must appear clearly at the bottom center of the image in an elegant, readable font, naturally integrated into the design.` : ''}`
-        : 'CRITICAL: The image must contain NO text, NO letters, NO words, NO writing whatsoever. Pure visual scene only.';
+        ? `The image SHOULD also include visible text IN SPANISH (español) such as a short Bible verse or inspirational phrase overlaid on the scene. ${brandingInstruction}`
+        : `The image must contain NO additional text except the branding. No Bible verses, no phrases, no extra words. ${brandingInstruction}`;
       
       // Synthesize into an English image generation prompt
       let synthResult = '';
@@ -127,7 +132,7 @@ Formato de respuesta (JSON puro):
 
 "${promptToUse}"
 
-Describe: iluminación, estilo artístico (cinematic, oil painting, watercolor, soft photography, etc.), composición, colores, atmósfera y emociones.${brandingText && allowTextInImage ? `\nIMPORTANTE: Incluye el texto exacto '${brandingText}' en la parte inferior central de la imagen, con tipografía elegante y legible.` : ''}
+Describe: iluminación, estilo artístico (cinematic, oil painting, watercolor, soft photography, etc.), composición, colores, atmósfera y emociones.${brandingText ? `\nIMPORTANTE: Incluye SIEMPRE el texto exacto '${brandingText}' en la parte inferior central de la imagen, con tipografía elegante y legible.` : ''}
 Responde SOLO con el prompt en inglés, nada más.`,
           config: {
             systemInstruction: `You are an expert visual prompt engineer. Output ONLY the English image prompt. No explanations, no markdown. Max 70 words. Be specific and creative.
@@ -139,16 +144,14 @@ ${textInstruction}`,
         if (text) { promptToUse = text.trim(); synthResult = promptToUse; }
       } catch (err) { console.error("Synth err:", err); }
       
-      // Append branding to the final prompt if text is allowed
-      if (allowTextInImage && brandingText) {
-        if (!promptToUse.toLowerCase().includes(brandingText.toLowerCase())) {
-          promptToUse += `, with the text "${brandingText}" elegantly displayed at the bottom center`;
-        }
+      // ALWAYS append branding to the final prompt
+      if (brandingText && !promptToUse.toLowerCase().includes(brandingText.toLowerCase())) {
+        promptToUse += `, with the text "${brandingText}" elegantly displayed at the bottom center`;
       }
       
       if (!allowTextInImage) {
-        promptToUse += " (no text, no letters, no writing)";
-        negativePromptStr = negativePromptStr ? negativePromptStr + ", text, letters, words, writing" : "text, letters, words, writing";
+        // Only block extra text, NOT the branding
+        negativePromptStr = negativePromptStr ? negativePromptStr + ", extra text, paragraphs" : "extra text, paragraphs";
       }
 
       const isGeminiImage = imageModel.includes('gemini');
