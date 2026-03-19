@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Link from 'next/link';
 
@@ -10,6 +10,13 @@ export const metadata: Metadata = {
   }
 };
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -18,9 +25,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
-          {/* Sidebar */}
-          <aside className="glass-panel" style={{ width: '280px', margin: '1rem', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div className="app-layout">
+          {/* Sidebar - visible on desktop */}
+          <aside className="glass-panel sidebar-desktop">
             <div>
               <h2 className="title-gradient" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>WA Tool</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Canal Cristiano</p>
@@ -28,16 +35,36 @@ export default function RootLayout({
             
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <Link href="/" className="btn" style={{ justifyContent: 'flex-start' }}>✍️ Generador</Link>
-              <Link href="/responder" className="btn" style={{ justifyContent: 'flex-start' }}>💬 Responder Duda</Link>
+              <Link href="/responder" className="btn" style={{ justifyContent: 'flex-start' }}>💬 Responder</Link>
               <Link href="/historial" className="btn" style={{ justifyContent: 'flex-start' }}>🕒 Historial</Link>
               <Link href="/settings" className="btn" style={{ justifyContent: 'flex-start' }}>⚙️ Ajustes</Link>
             </nav>
           </aside>
 
           {/* Main Content */}
-          <main style={{ flex: 1, padding: '1rem 2rem' }}>
+          <main className="main-content">
             {children}
           </main>
+
+          {/* Bottom Nav - visible on mobile */}
+          <nav className="bottom-nav glass-panel">
+            <Link href="/" className="bottom-nav-item">
+              <span>✍️</span>
+              <span>Generador</span>
+            </Link>
+            <Link href="/responder" className="bottom-nav-item">
+              <span>💬</span>
+              <span>Responder</span>
+            </Link>
+            <Link href="/historial" className="bottom-nav-item">
+              <span>🕒</span>
+              <span>Historial</span>
+            </Link>
+            <Link href="/settings" className="bottom-nav-item">
+              <span>⚙️</span>
+              <span>Ajustes</span>
+            </Link>
+          </nav>
         </div>
       </body>
     </html>

@@ -163,138 +163,141 @@ export default function Home() {
   };
 
   return (
-    <div className="container" style={{ paddingTop: '1rem', maxWidth: '1400px' }}>
+    <div className="container">
       
+      {/* Context + Add Button */}
       <div className="form-group" style={{ marginBottom: '1rem' }}>
-        <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>Contexto Adicional (Opcional) <small style={{ opacity: 0.5, marginLeft: '10px' }}>Arraste para organizar</small></span>
-          <button className="btn btn-primary" style={{ padding: '0.2rem 1rem', fontSize: '0.8rem' }} onClick={() => setIsAddingNew(true)}>
-            ➕ Agregar Nuevo Botón
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <span className="form-label" style={{ margin: 0 }}>Contexto (Opcional)</span>
+          <button className="btn btn-primary" style={{ padding: '0.3rem 0.8rem', fontSize: '0.75rem' }} onClick={() => setIsAddingNew(true)}>
+            ➕ Nuevo Botón
           </button>
-        </label>
-        <textarea className="form-control" placeholder="Añadir contexto específico..." value={customContext} onChange={(e) => setCustomContext(e.target.value)} style={{ minHeight: '50px' }} />
+        </div>
+        <textarea className="form-control" placeholder="Añadir contexto específico..." value={customContext} onChange={(e) => setCustomContext(e.target.value)} style={{ minHeight: '45px' }} />
       </div>
 
-      <div className="responsive-split" style={{ display: 'flex', gap: '2rem' }}>
-        
-        <div style={{ flex: 2 }}>
-          {result?.text && (
-            <div className="glass-panel animate-fade-in" style={{ padding: '1.5rem', marginBottom: '1.5rem', border: '1px solid var(--accent-color)' }}>
-              <div style={{ whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>{result.text}</div>
-              <button 
-                className="btn" 
-                style={{ width: '100%', background: copiedText ? '#10b981' : 'var(--accent-color)', color: 'white', transition: 'all 0.3s' }} 
-                onClick={() => copyToClipboard(result.text!)}
-              >
-                {copiedText ? '✅ ¡Copiado al Portapapeles!' : '📋 Copiar Texto'}
-              </button>
-            </div>
-          )}
+      {/* Loading */}
+      {loading && (
+        <div className="glass-panel" style={{ padding: '2rem', marginBottom: '1rem', textAlign: 'center' }}>
+          <div className="spinner" style={{ margin: '0 auto' }}></div>
+          <p style={{ marginTop: '1rem', fontSize: '0.9rem' }}>Creando...</p>
+        </div>
+      )}
 
-          <div className="grid grid-cols-2" style={{ gap: '1rem' }}>
-            {draggablePrompts.map((p, index) => (
-              <div 
-                key={p.id}
-                draggable
-                onDragStart={(e) => {
-                  if (!canDragRef.current) {
-                    e.preventDefault();
-                    return;
-                  }
-                  onDragStart(index);
-                }}
-                onDragOver={(e) => onDragOver(e, index)}
-                onDragEnd={onDragEnd}
-                className="glass-panel" 
-                style={{ 
-                  padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem',
-                  borderLeft: `4px solid ${p.color || 'var(--accent-color)'}`,
-                  opacity: draggedItemIndex === index ? 0.4 : 1,
-                  transition: 'transform 0.2s, opacity 0.2s',
-                  transform: draggedItemIndex === index ? 'scale(1.02)' : 'scale(1)'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div 
-                    onMouseDown={() => { canDragRef.current = true; }}
-                    onMouseUp={() => { canDragRef.current = false; }}
-                    style={{ cursor: 'grab', padding: '0.3rem 0.5rem', fontSize: '1.2rem', opacity: 0.5, userSelect: 'none' }} 
-                    title="Arrastrar para mover"
-                  >☰</div>
-                  <h3 style={{ margin: 0, fontSize: '0.95rem', flex: 1, marginLeft: '0.5rem' }}>{p.title}</h3>
-                  <button className="btn btn-icon" onClick={() => setEditingPrompt(p)}>⚙️</button>
-                </div>
-                <button 
-                  className="btn" 
-                  style={{ background: p.color || 'var(--accent-color)', color: 'white', width: '100%', fontSize: '0.9rem' }} 
-                  onClick={() => handleGenerate(p.id, 'text')} 
-                  disabled={loading}
-                >
-                  {p.title}
-                </button>
-              </div>
-            ))}
+      {/* Text Result */}
+      {result?.text && (
+        <div className="glass-panel animate-fade-in" style={{ padding: '1rem', marginBottom: '1rem', border: '1px solid var(--accent-color)' }}>
+          <div style={{ whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,0.2)', padding: '0.8rem', borderRadius: '8px', marginBottom: '0.8rem', fontSize: '0.9rem' }}>{result.text}</div>
+          <button 
+            className="btn" 
+            style={{ width: '100%', background: copiedText ? '#10b981' : 'var(--accent-color)', color: 'white', transition: 'all 0.3s' }} 
+            onClick={() => copyToClipboard(result.text!)}
+          >
+            {copiedText ? '✅ ¡Copiado!' : '📋 Copiar Texto'}
+          </button>
+        </div>
+      )}
+
+      {/* Image Result */}
+      {result?.image && (
+        <div className="glass-panel animate-fade-in" style={{ padding: '1rem', marginBottom: '1rem', border: '1px solid #ec4899', textAlign: 'center' }}>
+          <img src={result.image} alt="Generado" style={{ width: '100%', maxWidth: '400px', borderRadius: '12px', marginBottom: '0.8rem' }} />
+          <button 
+            className="btn" 
+            style={{ width: '100%', background: copiedImage ? '#10b981' : '#ec4899', color: 'white', transition: 'all 0.3s' }} 
+            onClick={() => copyImage(result.image!)}
+          >
+            {copiedImage ? '✅ ¡Imagen Copiada!' : '🖼️ Copiar Imagen'}
+          </button>
+          <details style={{ marginTop: '0.8rem', cursor: 'pointer', textAlign: 'left' }}>
+            <summary style={{ fontSize: '0.65rem', opacity: 0.6 }}>🔍 Datos técnicos</summary>
+            <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {result.originalResolvedPrompt && <div style={{ fontSize: '0.7rem', opacity: 0.8, padding: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }}><p style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{result.originalResolvedPrompt}</p></div>}
+              {result.synthesizedPrompt && <div style={{ fontSize: '0.7rem', opacity: 0.8, padding: '0.5rem', border: '1px dashed #ec4899', borderRadius: '6px' }}><p style={{ margin: 0, fontStyle: 'italic', wordBreak: 'break-word' }}>{result.synthesizedPrompt}</p></div>}
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* Image Generation Card */}
+      {prompts.filter(p => p.id === 'image_generation').map(p => (
+        <div key={p.id} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', borderTop: '4px solid #ec4899', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, color: '#ec4899', fontSize: '1rem' }}>🎨 {p.title}</h3>
+            <button className="btn btn-icon" onClick={() => setEditingPrompt(p)}>⚙️</button>
           </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+            <input type="checkbox" checked={allowTextInImage} onChange={(e) => setAllowTextInImage(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+            Incluir texto
+          </label>
+          <button className="btn" style={{ background: '#ec4899', color: 'white', padding: '0.8rem', fontWeight: 'bold' }} onClick={() => handleGenerate(p.id, 'image')} disabled={loading}>Crear Imagen</button>
         </div>
+      ))}
 
-        <div className="image-column" style={{ flex: 1, minWidth: '350px' }}>
-          {result?.image && (
-            <div className="glass-panel animate-fade-in" style={{ padding: '1.5rem', marginBottom: '1rem', border: '1px solid #ec4899', textAlign: 'center' }}>
-              <img src={result.image} alt="Generado" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '1rem' }} />
-              <button 
-                className="btn" 
-                style={{ width: '100%', background: copiedImage ? '#10b981' : '#ec4899', color: 'white', transition: 'all 0.3s' }} 
-                onClick={() => copyImage(result.image!)}
-              >
-                {copiedImage ? '✅ ¡Imagen Copiada!' : '🖼️ Copiar Imagen'}
-              </button>
-              <details style={{ marginTop: '1rem', cursor: 'pointer', textAlign: 'left' }}>
-                <summary style={{ fontSize: '0.7rem', opacity: 0.6 }}>🔍 Datos técnicos</summary>
-                <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {result.originalResolvedPrompt && <div style={{ fontSize: '0.75rem', opacity: 0.8, padding: '0.5rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px' }}><p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{result.originalResolvedPrompt}</p></div>}
-                  {result.synthesizedPrompt && <div style={{ fontSize: '0.75rem', opacity: 0.8, padding: '0.5rem', border: '1px dashed #ec4899', borderRadius: '6px' }}><p style={{ margin: 0, fontStyle: 'italic' }}>{result.synthesizedPrompt}</p></div>}
-                </div>
-              </details>
+      {/* Prompt Buttons Grid */}
+      <div className="grid grid-cols-2">
+        {draggablePrompts.map((p, index) => (
+          <div 
+            key={p.id}
+            draggable
+            onDragStart={(e) => {
+              if (!canDragRef.current) {
+                e.preventDefault();
+                return;
+              }
+              onDragStart(index);
+            }}
+            onDragOver={(e) => onDragOver(e, index)}
+            onDragEnd={onDragEnd}
+            className="glass-panel" 
+            style={{ 
+              padding: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.6rem',
+              borderLeft: `4px solid ${p.color || 'var(--accent-color)'}`,
+              opacity: draggedItemIndex === index ? 0.4 : 1,
+              transition: 'transform 0.2s, opacity 0.2s',
+              transform: draggedItemIndex === index ? 'scale(1.02)' : 'scale(1)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div 
+                onMouseDown={() => { canDragRef.current = true; }}
+                onMouseUp={() => { canDragRef.current = false; }}
+                style={{ cursor: 'grab', padding: '0.2rem 0.4rem', fontSize: '1rem', opacity: 0.5, userSelect: 'none' }} 
+                title="Arrastrar"
+              >☰</div>
+              <h3 style={{ margin: 0, fontSize: '0.85rem', flex: 1, marginLeft: '0.4rem' }}>{p.title}</h3>
+              <button className="btn btn-icon" style={{ padding: '0.3rem' }} onClick={() => setEditingPrompt(p)}>⚙️</button>
             </div>
-          )}
-          {loading && <div className="glass-panel" style={{ padding: '2rem', marginBottom: '1rem', textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }}></div><p style={{ marginTop: '1rem' }}>Creando...</p></div>}
-          {prompts.filter(p => p.id === 'image_generation').map(p => (
-            <div key={p.id} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', borderTop: '4px solid #ec4899' }}>
-              <div className="flex justify-between items-center">
-                <h3 style={{ margin: 0, color: '#ec4899' }}>🎨 {p.title}</h3>
-                <button className="btn btn-icon" onClick={() => setEditingPrompt(p)}>⚙️</button>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                <input type="checkbox" checked={allowTextInImage} onChange={(e) => setAllowTextInImage(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-                Incluir texto
-              </label>
-              <button className="btn" style={{ background: '#ec4899', color: 'white', padding: '1rem', fontWeight: 'bold' }} onClick={() => handleGenerate(p.id, 'image')} disabled={loading}>Crear Imagen</button>
-            </div>
-          ))}
-        </div>
+            <button 
+              className="btn" 
+              style={{ background: p.color || 'var(--accent-color)', color: 'white', width: '100%', fontSize: '0.85rem', padding: '0.6rem' }} 
+              onClick={() => handleGenerate(p.id, 'text')} 
+              disabled={loading}
+            >
+              {p.title}
+            </button>
+          </div>
+        ))}
       </div>
 
-      <style jsx>{`
-        @media (max-width: 900px) { .responsive-split { flex-direction: column !important; } .image-column { order: 2; min-width: 100% !important; } }
-      `}</style>
-
+      {/* Edit Modal */}
       {editingPrompt && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="glass-panel" style={{ width: '90%', maxWidth: '500px', padding: '1.5rem' }}>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEditingPrompt(null); }}>
+          <div className="glass-panel modal-content">
             <h3 className="mb-3">Configurar</h3>
             <div className="form-group"><label className="form-label">Título</label><input className="form-control" value={editingPrompt.title} onChange={e => setEditingPrompt({...editingPrompt, title: e.target.value})} /></div>
             <div className="form-group"><label className="form-label">Color</label><input type="color" className="form-control" style={{ height: '40px' }} value={editingPrompt.color || '#3b82f6'} onChange={e => setEditingPrompt({...editingPrompt, color: e.target.value})} /></div>
-            <div className="form-group"><label className="form-label">Prompt</label><textarea className="form-control" value={editingPrompt.content} onChange={e => setEditingPrompt({...editingPrompt, content: e.target.value})} style={{ minHeight: '100px' }} /></div>
-            <label className="form-label mt-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <div className="form-group"><label className="form-label">Prompt</label><textarea className="form-control" value={editingPrompt.content} onChange={e => setEditingPrompt({...editingPrompt, content: e.target.value})} /></div>
+            <label className="form-label mt-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
               <input type="checkbox" checked={editingPrompt.content.includes('[INPUT]')} onChange={e => {
                 const add = e.target.checked;
                 setEditingPrompt({...editingPrompt, content: add ? `${editingPrompt.content}\n\n[INPUT]` : editingPrompt.content.replace('\n\n[INPUT]', '').replace('[INPUT]', '')});
               }} style={{ width: '18px', height: '18px' }} />
-              Pedir un texto extra al usar este botón (ej. Versículo)
+              Pedir texto extra (ej. Versículo)
             </label>
-            <div className="flex" style={{ gap: '1rem', justifyContent: 'space-between', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'space-between', marginTop: '1rem' }}>
               <button className="btn" style={{ color: 'var(--danger-color)' }} onClick={() => handleDeletePrompt(editingPrompt.id)}>🗑️</button>
-              <div className="flex" style={{ gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.8rem' }}>
                 <button className="btn" onClick={() => setEditingPrompt(null)}>Cerrar</button>
                 <button className="btn btn-primary" onClick={handleSavePrompt}>Guardar</button>
               </div>
@@ -302,21 +305,23 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* New Prompt Modal */}
       {isAddingNew && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="glass-panel" style={{ width: '90%', maxWidth: '500px', padding: '1.5rem' }}>
-            <h3 className="mb-3">Nuevo</h3>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddingNew(false); }}>
+          <div className="glass-panel modal-content">
+            <h3 className="mb-3">Nuevo Botón</h3>
             <div className="form-group"><label className="form-label">Título</label><input className="form-control" value={newPrompt.title} onChange={e => setNewPrompt({...newPrompt, title: e.target.value})} /></div>
             <div className="form-group"><label className="form-label">Color</label><input type="color" className="form-control" style={{ height: '40px' }} value={newPrompt.color} onChange={e => setNewPrompt({...newPrompt, color: e.target.value})} /></div>
-            <div className="form-group"><label className="form-label">Instrucción</label><textarea className="form-control" value={newPrompt.content} onChange={e => setNewPrompt({...newPrompt, content: e.target.value})} style={{ minHeight: '100px' }} /></div>
-            <label className="form-label mt-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+            <div className="form-group"><label className="form-label">Instrucción</label><textarea className="form-control" value={newPrompt.content} onChange={e => setNewPrompt({...newPrompt, content: e.target.value})} /></div>
+            <label className="form-label mt-2" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
               <input type="checkbox" checked={newPrompt.content.includes('[INPUT]')} onChange={e => {
                 const add = e.target.checked;
                 setNewPrompt({...newPrompt, content: add ? `${newPrompt.content}\n\n[INPUT]` : newPrompt.content.replace('\n\n[INPUT]', '').replace('[INPUT]', '')});
               }} style={{ width: '18px', height: '18px' }} />
-              Pedir un texto extra al usar este botón (ej. Versículo)
+              Pedir texto extra (ej. Versículo)
             </label>
-            <div className="flex" style={{ gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
               <button className="btn" onClick={() => setIsAddingNew(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleAddNewPrompt}>Crear</button>
             </div>
