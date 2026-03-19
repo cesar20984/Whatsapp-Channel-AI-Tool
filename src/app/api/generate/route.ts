@@ -45,9 +45,11 @@ export async function POST(request: Request) {
       
       let synthResult = '';
       try {
-        const genModel = ai.getGenerativeModel({ model: textModel });
-        const resp = await genModel.generateContent(promptToUse);
-        const text = resp.response.text();
+        const resp = await ai.models.generateContent({
+            model: textModel,
+            contents: promptToUse
+        });
+        const text = resp.text;
         if (text) { promptToUse = text.trim(); synthResult = promptToUse; }
       } catch (err) { console.error("Synth err:", err); }
       
@@ -98,13 +100,18 @@ export async function POST(request: Request) {
       });
     }
 
-    const genModel = ai.getGenerativeModel({ 
+    const systemInstruction = `Asistente cristiano variado. No repitas temas:\n${historyText}\nCorto, natural, sin formato.`;
+    
+    const response = await ai.models.generateContent({
       model: textModel,
-      systemInstruction: `Asistente cristiano variado. No repitas temas:\n${historyText}\nCorto, natural, sin formato.`
+      contents: `Instrucción: ${finalInstruction}`,
+      config: {
+        systemInstruction: systemInstruction,
+        temperature: 0.9
+      }
     });
-
-    const response = await genModel.generateContent(`Instrucción: ${finalInstruction}`);
-    const generatedText = response.response.text() || '';
+    
+    const generatedText = response.text || '';
     
     await saveGeneration('text', basePromptStr, generatedText);
     return NextResponse.json({ result: generatedText });
