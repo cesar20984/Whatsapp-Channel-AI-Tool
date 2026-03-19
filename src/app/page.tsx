@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function Home() {
   const [prompts, setPrompts] = useState<{id: string, title: string, content: string, negative_prompt?: string, color?: string}[]>([]);
@@ -16,6 +16,7 @@ export default function Home() {
   const [copiedText, setCopiedText] = useState(false);
   const [copiedImage, setCopiedImage] = useState(false);
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+  const canDragRef = useRef(false);
 
   useEffect(() => {
     fetch('/api/prompts')
@@ -184,16 +185,14 @@ export default function Home() {
                 key={p.id}
                 draggable
                 onDragStart={(e) => {
-                  // Only allow drag from the handle
-                  const target = e.target as HTMLElement;
-                  if (!target.closest('.drag-handle')) {
+                  if (!canDragRef.current) {
                     e.preventDefault();
                     return;
                   }
                   onDragStart(index);
                 }}
                 onDragOver={(e) => onDragOver(e, index)}
-                onDragEnd={onDragEnd}
+                onDragEnd={() => { canDragRef.current = false; onDragEnd(); }}
                 className="glass-panel" 
                 style={{ 
                   padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem',
@@ -204,7 +203,12 @@ export default function Home() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div className="drag-handle" style={{ cursor: 'grab', padding: '0.2rem 0.4rem', fontSize: '1.1rem', opacity: 0.5, userSelect: 'none' }} title="Arrastrar para mover">☰</div>
+                  <div 
+                    onMouseDown={() => { canDragRef.current = true; }}
+                    onMouseUp={() => { canDragRef.current = false; }}
+                    style={{ cursor: 'grab', padding: '0.3rem 0.5rem', fontSize: '1.2rem', opacity: 0.5, userSelect: 'none' }} 
+                    title="Arrastrar para mover"
+                  >☰</div>
                   <h3 style={{ margin: 0, fontSize: '0.95rem', flex: 1, marginLeft: '0.5rem' }}>{p.title}</h3>
                   <button className="btn btn-icon" onClick={() => setEditingPrompt(p)}>⚙️</button>
                 </div>
