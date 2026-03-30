@@ -267,26 +267,37 @@ export default function Home() {
       )}
 
       {/* Image Generation Card */}
-      {prompts.filter(p => p.id === 'image_generation').map(p => (
-        <div key={p.id} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', borderTop: '4px solid #ec4899', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, color: '#ec4899', fontSize: '1rem' }}>🎨 {p.title}</h3>
-            <button className="btn btn-icon" onClick={() => setEditingPrompt(p)}>⚙️</button>
+      <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', borderTop: '4px solid #ec4899', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0, color: '#ec4899', fontSize: '1rem' }}>🎨 Generador de Imágenes</h3>
+        
+        {prompts.filter(p => p.id === 'image_suggestions').map(p => (
+          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '6px' }}>
+            <span style={{ fontSize: '0.85rem' }}>1. {p.title}</span>
+            <button className="btn btn-icon" onClick={() => setEditingPrompt(p)} title="Modificar prompt de temas">⚙️</button>
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.85rem' }}>
-            <input type="checkbox" checked={allowTextInImage} onChange={(e) => setAllowTextInImage(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-            Incluir texto
-          </label>
-          <button 
-            className="btn" 
-            style={{ background: '#ec4899', color: 'white', padding: '0.8rem', fontWeight: 'bold' }} 
-            onClick={() => handleGenerate(p.id, 'image-suggestions')} 
-            disabled={loading || loadingSuggestions}
-          >
-            {loadingSuggestions ? '⏳ Generando opciones...' : '🎨 Crear Imagen'}
-          </button>
-        </div>
-      ))}
+        ))}
+
+        {prompts.filter(p => p.id === 'image_generation').map(p => (
+          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '6px' }}>
+            <span style={{ fontSize: '0.85rem' }}>2. {p.title}</span>
+            <button className="btn btn-icon" onClick={() => setEditingPrompt(p)} title="Modificar prompt final (estilo, branding)">⚙️</button>
+          </div>
+        ))}
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+          <input type="checkbox" checked={allowTextInImage} onChange={(e) => setAllowTextInImage(e.target.checked)} style={{ width: '18px', height: '18px' }} />
+          Incluir texto en la imagen (versículos, frases)
+        </label>
+        
+        <button 
+          className="btn" 
+          style={{ background: '#ec4899', color: 'white', padding: '0.8rem', fontWeight: 'bold' }} 
+          onClick={() => handleGenerate('image_suggestions', 'image-suggestions')} 
+          disabled={loading || loadingSuggestions}
+        >
+          {loadingSuggestions ? '⏳ Generando opciones...' : '🎨 Crear Imagen'}
+        </button>
+      </div>
 
       {/* Image Suggestions */}
       {imageSuggestions.length > 0 && (

@@ -35,31 +35,28 @@ export async function POST(request: Request) {
     const latestText = recent.length > 0 ? recent[0].content : '';
 
     const finalInstruction = (basePromptStr || '')
-      .replace('{HISTORIAL}', actionType === 'text' ? historyText : (latestText || 'Sin historial.'))
+      .replace('{HISTORIAL}', actionType === 'image' ? (latestText || 'Sin historial.') : historyText)
       .replace('{EXTRA}', userContext || '(Sin contexto)');
 
     // ═══════════════════════════════════════════
     // STEP 1: IMAGE SUGGESTIONS (5 opciones)
     // ═══════════════════════════════════════════
     if (actionType === 'image-suggestions') {
-      const contextForSuggestions = finalInstruction || 'Contenido cristiano inspirador.';
       const textRule = allowTextInImage 
         ? '- Las imágenes PUEDEN incluir texto visible EN ESPAÑOL: versículos bíblicos, frases inspiradoras o títulos superpuestos. El texto SIEMPRE debe estar en español.' 
         : '- Las imágenes NO deben contener texto, letras ni palabras. Solo escenas visuales puras.';
       
       const resp = await ai.models.generateContent({
         model: textModel,
-        contents: `Analiza este contexto del canal cristiano y sugiere 5 ideas de imagen DIFERENTES y CREATIVAS.
+        contents: `${finalInstruction}
 
-CONTEXTO / HISTORIAL RECIENTE:
-${contextForSuggestions}
-
-REGLAS:
+REGLAS OBLIGATORIAS:
+- Debes sugerir EXACTAMENTE 5 ideas de imagen basadas en las instrucciones de arriba.
+- Cada opción debe conectarse con el tema del historial/contexto.
 - Cada opción debe ser una descripción corta (1-2 frases) en ESPAÑOL de lo que aparecería en la imagen.
 - Las opciones deben ser VARIADAS: distintos estilos, escenas, metáforas visuales.
-- NO repitas pastores con ovejas en todas las opciones. Sé creativo: paisajes, personas, objetos simbólicos, escenas abstractas, naturaleza, cosmos, etc.
+- NO repitas pastores con ovejas en todas las opciones. Sé creativo.
 ${textRule}
-- Cada opción debe conectarse con el tema del historial/contexto.
 - Responde ÚNICAMENTE con un JSON válido, sin markdown, sin backticks. NO uses comas al final del último elemento.
 
 Formato de respuesta (JSON puro):

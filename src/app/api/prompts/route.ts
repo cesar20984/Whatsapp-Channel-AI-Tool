@@ -2,7 +2,20 @@ import { NextResponse } from 'next/server';
 import { getPrompts, updatePrompt, createPrompt, deletePrompt, updatePromptPositions } from '@/lib/services';
 
 export async function GET() {
-  try { return NextResponse.json(await getPrompts()); } 
+  try {
+    const prompts = await getPrompts();
+    if (!prompts.find((p: any) => p.id === 'image_suggestions')) {
+      await createPrompt(
+        'image_suggestions',
+        'Temas de Imágenes',
+        'Importante: {EXTRA}.\nAnaliza el siguiente historial del canal: {HISTORIAL}.\nTu tarea es sugerir 5 opciones DIFERENTES y CREATIVAS de imágenes religiosas que acompañen estos temas.',
+        '#ec4899'
+      );
+      // reload after inserting
+      return NextResponse.json(await getPrompts());
+    }
+    return NextResponse.json(prompts);
+  } 
   catch (error) { return NextResponse.json({ error: String(error) }, { status: 500 }); }
 }
 
