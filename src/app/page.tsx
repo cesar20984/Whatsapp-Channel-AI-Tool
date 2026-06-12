@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import { resizeAndConvertImage } from '@/lib/imageHelper';
 
 export default function Home() {
   const [prompts, setPrompts] = useState<{id: string, title: string, content: string, negative_prompt?: string, color?: string}[]>([]);
@@ -14,6 +15,15 @@ export default function Home() {
   const [imageSuggestions, setImageSuggestions] = useState<{id: number, title: string, description: string}[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   
+  // WHATSAPP PUBLISHING STATE
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [publishType, setPublishType] = useState<'text' | 'image' | 'both'>('text');
+  const [publishText, setPublishText] = useState('');
+  const [publishImage, setPublishImage] = useState('');
+  const [publishTargets, setPublishTargets] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState<any>(null);
+
   // FEEDBACK STATE
   const [copiedText, setCopiedText] = useState(false);
   const [copiedImage, setCopiedImage] = useState(false);
@@ -209,6 +219,84 @@ export default function Home() {
     } catch (err) { console.error('Error copy image:', err); }
   };
 
+  const [includeText, setIncludeText] = useState(false);
+  const [includeImage, setIncludeImage] = useState(false);
+
+  const handleOpenPublishModal = async (sourceType: 'text' | 'image') => {
+    try {
+      const res = await fetch('/api/settings');
+      const settingsData = await res.json();
+      setPublishTargets(settingsData['whatsapp_targets'] || '');
+    } catch (e) {
+      console.error('Failed to load targets from settings:', e);
+    }
+    
+    if (sourceType === 'text') {
+      setIncludeText(true);
+      setIncludeImage(false);
+      setPublishText(result?.text || '');
+      setPublishImage('');
+    } else {
+      setIncludeImage(true);
+      setPublishImage(result?.image || '');
+      // Si hay un texto generado actualmente, usarlo como caption por defecto.
+      // Si no, usar la descripción o dejarlo en blanco.
+      if (result?.text) {
+        setIncludeText(true);
+        setPublishText(result.text);
+      } else {
+        setIncludeText(false);
+        setPublishText(result?.originalResolvedPrompt || '');
+      }
+    }
+    
+    setPublishStatus(null);
+    setIsPublishModalOpen(true);
+  };
+
+  const handleSendToWhatsApp = async () => {
+    setPublishing(true);
+    setPublishStatus(null);
+    try {
+      let imagePayload = null;
+      if (includeImage && publishImage) {
+        // Redimensionar y convertir a JPEG (calidad 85%, max 1200px) en el cliente
+        const processed = await resizeAndConvertImage(publishImage, 1200, 1200, 0.85);
+        imagePayload = processed;
+      }
+
+      const response = await fetch('/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: includeText ? publishText : undefined,
+          image: imagePayload,
+          customTargets: publishTargets
+        })
+      });
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.ok) {
+        setPublishStatus({ 
+          success: true, 
+          results: data.results, 
+          target: data.target, 
+          messageId: data.messageId 
+        });
+      } else {
+        throw new Error(data.message || 'Error desconocido al enviar el mensaje.');
+      }
+    } catch (error: any) {
+      setPublishStatus({ success: false, error: String(error) });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   return (
     <div className="container">
       
@@ -235,13 +323,22 @@ export default function Home() {
       {result?.text && (
         <div className="glass-panel animate-fade-in" style={{ padding: '1rem', marginBottom: '1rem', border: '1px solid var(--accent-color)' }}>
           <div style={{ whiteSpace: 'pre-wrap', background: 'rgba(0,0,0,0.2)', padding: '0.8rem', borderRadius: '8px', marginBottom: '0.8rem', fontSize: '0.9rem' }}>{result.text}</div>
-          <button 
-            className="btn" 
-            style={{ width: '100%', background: copiedText ? '#10b981' : 'var(--accent-color)', color: 'white', transition: 'all 0.3s' }} 
-            onClick={() => copyToClipboard(result.text!)}
-          >
-            {copiedText ? '✅ ¡Copiado!' : '📋 Copiar Texto'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.8rem' }}>
+            <button 
+              className="btn" 
+              style={{ flex: 1, background: copiedText ? '#10b981' : 'var(--accent-color)', color: 'white', transition: 'all 0.3s' }} 
+              onClick={() => copyToClipboard(result.text!)}
+            >
+              {copiedText ? '✅ ¡Copiado!' : '📋 Copiar Texto'}
+            </button>
+            <button 
+              className="btn" 
+              style={{ flex: 1, background: '#25d366', color: 'white', transition: 'all 0.3s' }} 
+              onClick={() => handleOpenPublishModal('text')}
+            >
+              📤 Publicar WhatsApp
+            </button>
+          </div>
         </div>
       )}
 
@@ -249,13 +346,22 @@ export default function Home() {
       {result?.image && (
         <div className="glass-panel animate-fade-in" style={{ padding: '1rem', marginBottom: '1rem', border: '1px solid #ec4899', textAlign: 'center' }}>
           <img src={result.image} alt="Generado" style={{ width: '100%', maxWidth: '400px', borderRadius: '12px', marginBottom: '0.8rem' }} />
-          <button 
-            className="btn" 
-            style={{ width: '100%', background: copiedImage ? '#10b981' : '#ec4899', color: 'white', transition: 'all 0.3s' }} 
-            onClick={() => copyImage(result.image!)}
-          >
-            {copiedImage ? '✅ ¡Imagen Copiada!' : '🖼️ Copiar Imagen'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '0.8rem' }}>
+            <button 
+              className="btn" 
+              style={{ flex: 1, background: copiedImage ? '#10b981' : '#ec4899', color: 'white', transition: 'all 0.3s' }} 
+              onClick={() => copyImage(result.image!)}
+            >
+              {copiedImage ? '✅ ¡Imagen Copiada!' : '🖼️ Copiar Imagen'}
+            </button>
+            <button 
+              className="btn" 
+              style={{ flex: 1, background: '#25d366', color: 'white', transition: 'all 0.3s' }} 
+              onClick={() => handleOpenPublishModal('image')}
+            >
+              📤 Publicar WhatsApp
+            </button>
+          </div>
           <details style={{ marginTop: '0.8rem', cursor: 'pointer', textAlign: 'left' }}>
             <summary style={{ fontSize: '0.65rem', opacity: 0.6 }}>🔍 Datos técnicos</summary>
             <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -425,6 +531,169 @@ export default function Home() {
             <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
               <button className="btn" onClick={() => setIsAddingNew(false)}>Cancelar</button>
               <button className="btn btn-primary" onClick={handleAddNewPrompt}>Crear</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Publishing Modal */}
+      {isPublishModalOpen && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget && !publishing) setIsPublishModalOpen(false); }}>
+          <div className="glass-panel modal-content" style={{ maxWidth: '500px', width: '90%', maxHeight: '90vh', overflowY: 'auto', padding: '1.8rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#25d366', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                🚀 Publicar en WhatsApp
+              </h3>
+              <button 
+                className="btn btn-icon" 
+                onClick={() => setIsPublishModalOpen(false)} 
+                disabled={publishing}
+                style={{ fontSize: '1.1rem', opacity: 0.7 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Configuración de Envío */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Opciones de Contenido */}
+              <div style={{ display: 'flex', gap: '1rem', background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                {publishImage && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={includeImage} 
+                      onChange={(e) => setIncludeImage(e.target.checked)} 
+                      disabled={publishing}
+                      style={{ width: '16px', height: '16px' }}
+                    />
+                    Incluir Imagen
+                  </label>
+                )}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={includeText} 
+                    onChange={(e) => setIncludeText(e.target.checked)} 
+                    disabled={publishing}
+                    style={{ width: '16px', height: '16px' }}
+                  />
+                  Incluir Texto / Caption
+                </label>
+              </div>
+
+              {/* Vista previa de Imagen */}
+              {includeImage && publishImage && (
+                <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                  <img 
+                    src={publishImage} 
+                    alt="Previsualización" 
+                    style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', objectFit: 'contain' }} 
+                  />
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
+                    Se convertirá a JPEG y se redimensionará optimizadamente.
+                  </div>
+                </div>
+              )}
+
+              {/* Campo de Texto / Caption */}
+              {includeText && (
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.8rem' }}>Mensaje o Caption</label>
+                  <textarea 
+                    className="form-control" 
+                    value={publishText} 
+                    onChange={(e) => setPublishText(e.target.value)}
+                    placeholder="Escribe el mensaje..."
+                    disabled={publishing}
+                    style={{ minHeight: '100px', fontSize: '0.85rem' }}
+                  />
+                </div>
+              )}
+
+              {/* Destinatarios */}
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>
+                  Destinatarios de WhatsApp (Separados por comas)
+                </label>
+                <textarea 
+                  className="form-control" 
+                  value={publishTargets} 
+                  onChange={(e) => setPublishTargets(e.target.value)}
+                  placeholder="Ej: +569XXXXXXXX, 120363XXXXXXXX@g.us"
+                  disabled={publishing}
+                  style={{ minHeight: '60px', fontSize: '0.8rem' }}
+                />
+              </div>
+
+              {/* Estado de Carga y Envío */}
+              {publishing && (
+                <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
+                  <div className="spinner" style={{ margin: '0 auto 0.5rem auto', width: '25px', height: '25px', borderWidth: '3px' }}></div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Procesando imagen JPEG y publicando en WhatsApp...
+                  </div>
+                </div>
+              )}
+
+              {/* Respuestas de la API */}
+              {publishStatus && (
+                <div 
+                  style={{ 
+                    padding: '0.8rem', 
+                    borderRadius: '8px', 
+                    fontSize: '0.8rem',
+                    background: publishStatus.success ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                    border: `1px solid ${publishStatus.success ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                    color: publishStatus.success ? '#10b981' : '#ef4444'
+                  }}
+                >
+                  {publishStatus.success ? (
+                    <div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '0.3rem' }}>¡Publicado con éxito! 🎉</div>
+                      {publishStatus.results ? (
+                        <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          {publishStatus.results.map((res: any, idx: number) => (
+                            <li key={idx} style={{ color: res.ok ? '#10b981' : '#ef4444' }}>
+                              {res.ok ? `✓ Enviado a ${res.target}` : `✕ Falló a ${res.target}`}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div>Mensaje ID: {publishStatus.messageId}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '0.2rem' }}>Error al publicar:</div>
+                      <div>{publishStatus.error}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Acciones */}
+              <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button 
+                  className="btn" 
+                  onClick={() => setIsPublishModalOpen(false)}
+                  disabled={publishing}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  className="btn" 
+                  style={{ 
+                    background: '#25d366', 
+                    color: 'white',
+                    opacity: (!includeText && !includeImage) || !publishTargets.trim() ? 0.5 : 1 
+                  }}
+                  onClick={handleSendToWhatsApp}
+                  disabled={publishing || (!includeText && !includeImage) || !publishTargets.trim()}
+                >
+                  🚀 Enviar
+                </button>
+              </div>
             </div>
           </div>
         </div>

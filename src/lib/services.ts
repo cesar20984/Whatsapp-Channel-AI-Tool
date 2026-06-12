@@ -55,8 +55,12 @@ export async function getSettings(): Promise<Record<string, string>> {
 }
 
 export async function saveSetting(key: string, value: string): Promise<void> {
-  // Use a query that works for both OR REPLACE (SQLite) and ON CONFLICT (Postgres handled by dbQuery)
-  await dbQuery('INSERT INTO settings (key, value) VALUES (?, ?)', [key, value]);
+  const rows = await dbQuery('SELECT key FROM settings WHERE key = ?', [key]) as any[];
+  if (rows.length > 0) {
+    await dbQuery('UPDATE settings SET value = ? WHERE key = ?', [value, key]);
+  } else {
+    await dbQuery('INSERT INTO settings (key, value) VALUES (?, ?)', [key, value]);
+  }
 }
 
 // HISTORY (GENERATIONS)
